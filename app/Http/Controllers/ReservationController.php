@@ -21,8 +21,8 @@ class ReservationController extends Controller
             ->orderBy('name')
             ->get();
 
-        // Query base (já carrega room e user para exibir "criado por" depois)
-        $query = Reservation::with(['room', 'user'])
+        // Query base (carrega room, criador e editor)
+        $query = Reservation::with(['room', 'user', 'editor'])
             ->orderBy('date')
             ->orderBy('start_time');
 
@@ -88,7 +88,7 @@ class ReservationController extends Controller
 
     public function show(Reservation $reservation)
     {
-        $reservation->load(['room', 'user']);
+        $reservation->load(['room', 'user', 'editor']);
 
         return view('reservations.show', compact('reservation'));
     }
@@ -115,6 +115,9 @@ class ReservationController extends Controller
                     'start_time' => 'Conflito: já existe um agendamento nessa sala nesse horário.',
                 ]);
         }
+
+        // ✅ Rastreabilidade: quem editou por último
+        $data['updated_by'] = auth()->id();
 
         $reservation->update($data);
 

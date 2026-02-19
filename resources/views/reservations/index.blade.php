@@ -90,6 +90,27 @@
         }
 
         .footer { margin-top: 12px; display:flex; justify-content:center; }
+
+        /* Criado/Editado por (avatar + nome) */
+        .user-cell {
+            display:flex;
+            align-items:center;
+            gap:10px;
+        }
+
+        .avatar {
+            width:28px;
+            height:28px;
+            border-radius:50%;
+            background:#0b5fff;
+            color:#fff;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            font-size:13px;
+            font-weight:800;
+            flex-shrink:0;
+        }
     </style>
 
     <div class="page">
@@ -188,6 +209,7 @@
                             <th>Título</th>
                             <th>Solicitante</th>
                             <th>Criado por</th>
+                            <th>Editado por</th>
                             <th style="width: 280px;">Ações</th>
                         </tr>
                     </thead>
@@ -207,10 +229,38 @@
                                     <div class="truncate" title="{{ $r->requester }}">{{ $r->requester }}</div>
                                 </td>
 
+                                {{-- Criado por --}}
                                 <td>
-                                    <span class="badge">
-                                        {{ $r->user?->name ?? '—' }}
-                                    </span>
+                                    @if($r->user)
+                                        <div class="user-cell">
+                                            <div class="avatar">
+                                                {{ strtoupper(substr($r->user->name, 0, 1)) }}
+                                            </div>
+
+                                            <div class="truncate" title="{{ $r->user->name }}">
+                                                {{ $r->user->name }}
+                                            </div>
+                                        </div>
+                                    @else
+                                        —
+                                    @endif
+                                </td>
+
+                                {{-- Editado por --}}
+                                <td>
+                                    @if($r->editor)
+                                        <div class="user-cell">
+                                            <div class="avatar">
+                                                {{ strtoupper(substr($r->editor->name, 0, 1)) }}
+                                            </div>
+
+                                            <div class="truncate" title="{{ $r->editor->name }}">
+                                                {{ $r->editor->name }}
+                                            </div>
+                                        </div>
+                                    @else
+                                        —
+                                    @endif
                                 </td>
 
                                 <td>

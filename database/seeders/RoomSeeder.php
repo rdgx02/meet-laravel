@@ -11,11 +11,11 @@ class RoomSeeder extends Seeder
     {
         $rooms = ['203', '207', '219', '305'];
 
-        foreach ($rooms as $room) {
-            Room::create([
-                'name' => $room,
-                'is_active' => true,
-            ]);
+        foreach ($rooms as $name) {
+            Room::updateOrCreate(
+                ['name' => $name], // condição de busca
+                ['is_active' => true] // valores garantidos
+            );
         }
     }
 }
