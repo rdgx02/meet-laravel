@@ -2,13 +2,15 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Reservation extends Model
 {
     protected $fillable = [
         'room_id',
+        'user_id', // quem criou
         'date',
         'start_time',
         'end_time',
@@ -17,12 +19,27 @@ class Reservation extends Model
         'contact',
     ];
 
-    public function room()
+    /*
+    |--------------------------------------------------------------------------
+    | Relationships
+    |--------------------------------------------------------------------------
+    */
+
+    public function room(): BelongsTo
     {
         return $this->belongsTo(Room::class);
     }
 
-    // ===== Accessors formatados =====
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Accessors formatados
+    |--------------------------------------------------------------------------
+    */
 
     public function getDateBrAttribute(): string
     {

@@ -14,14 +14,15 @@ class ReservationController extends Controller
     {
         $perPage = (int) request()->get('per_page', 10);
         $roomId  = request()->get('room_id');
+        $q       = trim((string) request()->get('q', ''));
 
         // Salas para o select do filtro
         $rooms = Room::where('is_active', true)
             ->orderBy('name')
             ->get();
 
-        // Query base
-        $query = Reservation::with('room')
+        // Query base (já carrega room e user para exibir "criado por" depois)
+        $query = Reservation::with(['room', 'user'])
             ->orderBy('date')
             ->orderBy('start_time');
 
@@ -33,6 +34,17 @@ class ReservationController extends Controller
         // Filtro: somente futuras (inclui hoje inteiro; some só quando virar o dia)
         if (request()->boolean('only_future')) {
             $query->whereDate('date', '>=', now()->toDateString());
+        }
+
+        // Busca (Título, Solicitante, Sala)
+        if ($q !== '') {
+            $query->where(function ($sub) use ($q) {
+                $sub->where('title', 'like', "%{$q}%")
+                    ->orWhere('requester', 'like', "%{$q}%")
+                    ->orWhereHas('room', function ($room) use ($q) {
+                        $room->where('name', 'like', "%{$q}%");
+                    });
+            });
         }
 
         $reservations = $query
@@ -55,6 +67,9 @@ class ReservationController extends Controller
     {
         $data = $request->validated();
 
+        // Rastreabilidade: quem criou
+        $data['user_id'] = auth()->id();
+
         $conflictService = new ReservationConflictService();
 
         if ($conflictService->hasConflict($data)) {
@@ -73,7 +88,7 @@ class ReservationController extends Controller
 
     public function show(Reservation $reservation)
     {
-        $reservation->load('room');
+        $reservation->load(['room', 'user']);
 
         return view('reservations.show', compact('reservation'));
     }

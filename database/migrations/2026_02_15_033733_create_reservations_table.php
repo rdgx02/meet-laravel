@@ -12,22 +12,29 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('reservations', function (Blueprint $table) {
-    $table->id();
+            $table->id();
 
-    $table->foreignId('room_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('room_id')->constrained()->cascadeOnDelete();
 
-    $table->date('date');           // dia do agendamento
-    $table->time('start_time');     // hora início
-    $table->time('end_time');       // hora fim
+            // Quem criou o agendamento (rastreabilidade)
+            $table->foreignId('user_id')
+                ->nullable()
+                ->constrained()
+                ->nullOnDelete();
 
-    $table->string('title');        // motivo / título
-    $table->string('requester');    // quem solicitou (nome)
-    $table->string('contact')->nullable(); // opcional: ramal/email
+            $table->date('date');           // dia do agendamento
+            $table->time('start_time');     // hora início
+            $table->time('end_time');       // hora fim
 
-    $table->timestamps();
+            $table->string('title');        // motivo / título
+            $table->string('requester');    // quem solicitou (nome)
+            $table->string('contact')->nullable(); // opcional: ramal/email
 
-    $table->index(['room_id', 'date']);
-});
+            $table->timestamps();
+
+            $table->index(['room_id', 'date']);
+            $table->index(['user_id', 'date']);
+        });
     }
 
     /**
