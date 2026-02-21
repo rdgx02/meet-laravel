@@ -11,18 +11,22 @@ class ReservationSeeder extends Seeder
 {
     public function run(): void
     {
-        // Quantos dias no futuro vamos popular
-        $daysAhead = 14;
+        // ===== CONFIG =====
+        $totalToCreate = 10;
 
-        // Horário de funcionamento (ajuste se quiser)
+        // Cria a partir de amanhã (pra não sujar "hoje")
+        $date = Carbon::tomorrow()->toDateString();
+
+        // Horário de funcionamento
         $openHour  = 8;   // 08:00
         $closeHour = 18;  // 18:00 (fim)
         $stepMin   = 30;  // grade de 30 em 30 min
 
-        // Quantos agendamentos tentar criar por sala por dia
-        $targetPerRoomPerDay = 4;
+        // Secretaria (criador)
+        $creatorUserId = 2; // <-- troque aqui se quiser
+        // ==================
 
-        $rooms = Room::where('is_active', true)->get();
+        $rooms = Room::where('is_active', true)->orderBy('id')->get();
 
         if ($rooms->isEmpty()) {
             $this->command?->warn('Nenhuma sala ativa encontrada. Cadastre salas antes de rodar o seeder.');
@@ -40,59 +44,60 @@ class ReservationSeeder extends Seeder
 
         $created = 0;
         $skipped = 0;
+        $attempts = 0;
 
-        for ($d = 0; $d <= $daysAhead; $d++) {
-            $date = Carbon::today()->addDays($d)->toDateString();
+        // tenta até criar exatamente 10 (limite de segurança pra não loopar pra sempre)
+        while ($created < $totalToCreate && $attempts < 500) {
+            $attempts++;
 
-            foreach ($rooms as $room) {
-                $attempts = 0;
-                $madeForThisRoomDay = 0;
+            $room = $rooms[$created % $rooms->count()];
 
-                // tenta várias vezes até atingir a meta, sem conflitos
-                while ($madeForThisRoomDay < $targetPerRoomPerDay && $attempts < 50) {
-                    $attempts++;
+            // duração aleatória: 30, 60, 90 ou 120 min
+            $durations = [30, 60, 90, 120];
+            $durationMin = $durations[array_rand($durations)];
 
-                    // duração aleatória: 30, 60, 90 ou 120 min
-                    $durationMin = [30, 60, 90, 120][array_rand([30, 60, 90, 120])];
+            // último start possível (pra não passar do fechamento)
+            $latestStart = ($closeHour * 60) - $durationMin;
 
-                    // calcula o último horário de início possível (pra não passar do fechamento)
-                    $latestStart = ($closeHour * 60) - $durationMin;
+            // escolhe um start em múltiplos de 30 minutos dentro do expediente
+            $startMin = rand($openHour * 60, $latestStart);
+            $startMin = intdiv($startMin, $stepMin) * $stepMin;
 
-                    // escolhe um start em múltiplos de 30 minutos dentro do expediente
-                    $startMin = rand($openHour * 60, $latestStart);
-                    $startMin = intdiv($startMin, $stepMin) * $stepMin; // arredonda pra grade
+            $start = Carbon::createFromTime(0, 0)->addMinutes($startMin)->format('H:i');
+            $end   = Carbon::createFromTime(0, 0)->addMinutes($startMin + $durationMin)->format('H:i');
 
-                    $start = Carbon::createFromTime(0, 0)->addMinutes($startMin)->format('H:i');
-                    $end   = Carbon::createFromTime(0, 0)->addMinutes($startMin + $durationMin)->format('H:i');
+            // conflito (sobreposição) na mesma sala/data
+            $hasConflict = Reservation::where('room_id', $room->id)
+                ->where('date', $date)
+                ->where(function ($q) use ($start, $end) {
+                    $q->where('start_time', '<', $end)
+                      ->where('end_time',   '>', $start);
+                })
+                ->exists();
 
-                    // Checa conflito com regra de sobreposição
-                    $hasConflict = Reservation::where('room_id', $room->id)
-                        ->where('date', $date)
-                        ->where(function ($q) use ($start, $end) {
-                            $q->where('start_time', '<', $end)
-                              ->where('end_time',   '>', $start);
-                        })
-                        ->exists();
-
-                    if ($hasConflict) {
-                        $skipped++;
-                        continue;
-                    }
-
-                    Reservation::create([
-                        'room_id'    => $room->id,
-                        'date'       => $date,
-                        'start_time' => $start,
-                        'end_time'   => $end,
-                        'title'      => $titles[array_rand($titles)] . ' - ' . $room->name,
-                        'requester'  => $requesters[array_rand($requesters)],
-                        'contact'    => null,
-                    ]);
-
-                    $created++;
-                    $madeForThisRoomDay++;
-                }
+            if ($hasConflict) {
+                $skipped++;
+                continue;
             }
+
+            Reservation::create([
+                'room_id'    => $room->id,
+                'user_id'    => $creatorUserId, // quem criou (secretaria)
+                // 'editor_id'  => $creatorUserId, // se existir no seu schema, pode manter
+                'date'       => $date,
+                'start_time' => $start,
+                'end_time'   => $end,
+                'title'      => $titles[array_rand($titles)] . ' - ' . $room->name,
+                'requester'  => $requesters[array_rand($requesters)],
+                'contact'    => null,
+            ]);
+
+            $created++;
+        }
+
+        if ($created < $totalToCreate) {
+            $this->command?->warn("Seeder concluiu, mas não conseguiu criar {$totalToCreate}. Criados: {$created}. Conflitos ignorados: {$skipped}.");
+            return;
         }
 
         $this->command?->info("Seeder concluído. Criados: {$created}. Tentativas com conflito ignoradas: {$skipped}.");

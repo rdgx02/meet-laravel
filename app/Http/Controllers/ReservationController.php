@@ -12,6 +12,8 @@ class ReservationController extends Controller
 {
     public function index()
     {
+        $this->authorize('viewAny', Reservation::class);
+
         $perPage = (int) request()->get('per_page', 10);
         $roomId  = request()->get('room_id');
         $q       = trim((string) request()->get('q', ''));
@@ -56,6 +58,8 @@ class ReservationController extends Controller
 
     public function create()
     {
+        $this->authorize('create', Reservation::class);
+
         $rooms = Room::where('is_active', true)
             ->orderBy('name')
             ->get();
@@ -65,6 +69,8 @@ class ReservationController extends Controller
 
     public function store(StoreReservationRequest $request)
     {
+        $this->authorize('create', Reservation::class);
+
         $data = $request->validated();
 
         // Rastreabilidade: quem criou
@@ -88,6 +94,8 @@ class ReservationController extends Controller
 
     public function show(Reservation $reservation)
     {
+        $this->authorize('view', $reservation);
+
         $reservation->load(['room', 'user', 'editor']);
 
         return view('reservations.show', compact('reservation'));
@@ -95,6 +103,8 @@ class ReservationController extends Controller
 
     public function edit(Reservation $reservation)
     {
+        $this->authorize('update', $reservation);
+
         $rooms = Room::where('is_active', true)
             ->orderBy('name')
             ->get();
@@ -104,6 +114,8 @@ class ReservationController extends Controller
 
     public function update(UpdateReservationRequest $request, Reservation $reservation)
     {
+        $this->authorize('update', $reservation);
+
         $data = $request->validated();
 
         $conflictService = new ReservationConflictService();
@@ -127,6 +139,8 @@ class ReservationController extends Controller
 
     public function destroy(Reservation $reservation)
     {
+        $this->authorize('delete', $reservation);
+
         $reservation->delete();
 
         return redirect()->route('reservations.index')

@@ -16,11 +16,17 @@ Route::get('/', function () {
 
 /**
  * (Opcional) dashboard do Breeze.
- * Você pode remover depois, se não usar.
  */
 Route::get('/dashboard', function () {
     return view('dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
+
+/**
+ * 🔐 Área ADMIN (teste do middleware)
+ */
+Route::get('/admin-teste', function () {
+    return 'Área administrativa ✅';
+})->middleware('admin');
 
 /**
  * Tudo abaixo exige login.

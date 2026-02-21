@@ -111,12 +111,23 @@
             font-weight:800;
             flex-shrink:0;
         }
+
+        /* ===== Destaque: agendamento "MEU" ===== */
+        tbody tr.row-mine {
+            background: rgba(11,95,255,.07) !important;
+        }
+        tbody tr.row-mine:hover {
+            background: rgba(11,95,255,.12) !important;
+        }
     </style>
 
     <div class="page">
         <div class="header">
             <h2 class="title">Agendamentos</h2>
-            <a class="btn btn-primary" href="{{ route('reservations.create') }}">+ Novo Agendamento</a>
+
+            @can('create', \App\Models\Reservation::class)
+                <a class="btn btn-primary" href="{{ route('reservations.create') }}">+ Novo Agendamento</a>
+            @endcan
         </div>
 
         @if (session('success'))
@@ -215,7 +226,7 @@
                     </thead>
                     <tbody>
                         @foreach ($reservations as $r)
-                            <tr>
+                            <tr class="{{ auth()->id() === $r->user_id ? 'row-mine' : '' }}">
                                 <td class="text-strong">{{ $r->date_br }}</td>
                                 <td>{{ $r->start_time_br }}</td>
                                 <td>{{ $r->end_time_br }}</td>
@@ -266,16 +277,21 @@
                                 <td>
                                     <div class="actions">
                                         <a class="btn btn-sm btn-ghost" href="{{ route('reservations.show', $r) }}">Ver</a>
-                                        <a class="btn btn-sm btn-ghost" href="{{ route('reservations.edit', $r) }}">Editar</a>
 
-                                        <form method="POST"
-                                              action="{{ route('reservations.destroy', $r) }}"
-                                              onsubmit="return confirm('Excluir este agendamento?');"
-                                              style="display:inline;">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn btn-sm btn-danger">Excluir</button>
-                                        </form>
+                                        @can('update', $r)
+                                            <a class="btn btn-sm btn-ghost" href="{{ route('reservations.edit', $r) }}">Editar</a>
+                                        @endcan
+
+                                        @can('delete', $r)
+                                            <form method="POST"
+                                                  action="{{ route('reservations.destroy', $r) }}"
+                                                  onsubmit="return confirm('Excluir este agendamento?');"
+                                                  style="display:inline;">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn btn-sm btn-danger">Excluir</button>
+                                            </form>
+                                        @endcan
                                     </div>
                                 </td>
                             </tr>
