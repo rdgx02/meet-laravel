@@ -14,11 +14,18 @@ use Illuminate\View\View;
 
 class RegisteredUserController extends Controller
 {
+    private function ensureRegistrationEnabled(): void
+    {
+        abort_unless(config('auth.allow_public_registration'), 404);
+    }
+
     /**
      * Display the registration view.
      */
     public function create(): View
     {
+        $this->ensureRegistrationEnabled();
+
         return view('auth.register');
     }
 
@@ -29,6 +36,8 @@ class RegisteredUserController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
+        $this->ensureRegistrationEnabled();
+
         $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
@@ -45,6 +54,6 @@ class RegisteredUserController extends Controller
 
         Auth::login($user);
 
-        return redirect(route('dashboard', absolute: false));
+        return redirect(route('reservations.index', absolute: false));
     }
 }

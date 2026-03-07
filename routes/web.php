@@ -1,8 +1,8 @@
 <?php
 
 use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\RoomController;
 use App\Http\Controllers\ReservationController;
+use App\Http\Controllers\RoomController;
 use Illuminate\Support\Facades\Route;
 
 /**
@@ -15,11 +15,12 @@ Route::get('/', function () {
 })->name('home');
 
 /**
- * (Opcional) dashboard do Breeze.
+ * Compatibilidade com rota do Breeze.
+ * A home real do sistema da secretaria e a agenda.
  */
 Route::get('/dashboard', function () {
-    return view('dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+    return redirect()->route('reservations.index');
+})->middleware(['auth'])->name('dashboard');
 
 /**
  * 🔐 Área ADMIN (teste do middleware)
@@ -34,7 +35,7 @@ Route::get('/admin-teste', function () {
 Route::middleware('auth')->group(function () {
 
     // Salas
-    Route::resource('rooms', RoomController::class);
+    Route::resource('rooms', RoomController::class)->only(['index']);
 
     // Agendamentos
     Route::resource('reservations', ReservationController::class);

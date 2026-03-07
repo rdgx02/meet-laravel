@@ -4,6 +4,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Public Registration
+    |--------------------------------------------------------------------------
+    |
+    | For internal installations, keep this disabled so users are created
+    | only by administrators. Enable only if your deployment needs self-signup.
+    |
+    */
+
+    'allow_public_registration' => env('ALLOW_PUBLIC_REGISTRATION', false),
+
+    /*
+    |--------------------------------------------------------------------------
     | Authentication Defaults
     |--------------------------------------------------------------------------
     |
