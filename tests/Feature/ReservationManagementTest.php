@@ -91,4 +91,72 @@ class ReservationManagementTest extends TestCase
         $response->assertSessionHasErrors('start_time');
         $this->assertDatabaseCount('reservations', 1);
     }
+
+    public function test_index_shows_only_today_and_future_reservations(): void
+    {
+        $user = User::factory()->create(['role' => UserRole::User]);
+        $room = Room::create(['name' => 'Sala Agenda', 'is_active' => true]);
+
+        Reservation::create([
+            'room_id' => $room->id,
+            'user_id' => $user->id,
+            'date' => now()->subDay()->toDateString(),
+            'start_time' => '09:00',
+            'end_time' => '10:00',
+            'title' => 'Reserva Passada',
+            'requester' => 'Equipe',
+            'contact' => null,
+        ]);
+
+        Reservation::create([
+            'room_id' => $room->id,
+            'user_id' => $user->id,
+            'date' => now()->addDay()->toDateString(),
+            'start_time' => '11:00',
+            'end_time' => '12:00',
+            'title' => 'Reserva Futura',
+            'requester' => 'Equipe',
+            'contact' => null,
+        ]);
+
+        $response = $this->actingAs($user)->get(route('reservations.index'));
+
+        $response->assertOk();
+        $response->assertSeeText('Reserva Futura');
+        $response->assertDontSeeText('Reserva Passada');
+    }
+
+    public function test_history_shows_only_past_reservations(): void
+    {
+        $user = User::factory()->create(['role' => UserRole::User]);
+        $room = Room::create(['name' => 'Sala Historico', 'is_active' => true]);
+
+        Reservation::create([
+            'room_id' => $room->id,
+            'user_id' => $user->id,
+            'date' => now()->subDay()->toDateString(),
+            'start_time' => '09:00',
+            'end_time' => '10:00',
+            'title' => 'Passada no Historico',
+            'requester' => 'Equipe',
+            'contact' => null,
+        ]);
+
+        Reservation::create([
+            'room_id' => $room->id,
+            'user_id' => $user->id,
+            'date' => now()->addDay()->toDateString(),
+            'start_time' => '11:00',
+            'end_time' => '12:00',
+            'title' => 'Futura na Agenda',
+            'requester' => 'Equipe',
+            'contact' => null,
+        ]);
+
+        $response = $this->actingAs($user)->get(route('reservations.history'));
+
+        $response->assertOk();
+        $response->assertSeeText('Passada no Historico');
+        $response->assertDontSeeText('Futura na Agenda');
+    }
 }

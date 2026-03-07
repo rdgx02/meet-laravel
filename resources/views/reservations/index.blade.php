@@ -1,12 +1,13 @@
 @extends('layouts.app')
 
-@section('title', 'Agendamentos')
+@section('title', $title ?? 'Agendamentos')
 
 @section('content')
     <style>
         .page { max-width: 1100px; margin: 0 auto; }
         .header { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom: 14px; }
         .title { margin: 0; font-size: 22px; }
+        .subtitle { margin: 6px 0 0; color:#4b5563; font-size: 14px; }
 
         .btn {
             display:inline-flex; align-items:center; justify-content:center;
@@ -44,7 +45,6 @@
             background: #fff; outline: none;
         }
         .input:focus, select:focus { border-color:#0b5fff; box-shadow: 0 0 0 3px rgba(11,95,255,.15); }
-        .checkline { display:flex; align-items:center; gap:8px; padding-bottom: 2px; }
         .meta { color:#4b5563; font-size: 14px; margin: 10px 0; }
 
         .table-wrap { overflow:auto; border-radius: 12px; border:1px solid #e5e7eb; }
@@ -123,11 +123,16 @@
 
     <div class="page">
         <div class="header">
-            <h2 class="title">Agendamentos</h2>
+            <div>
+                <h2 class="title">{{ $title ?? 'Agendamentos' }}</h2>
+                <p class="subtitle">{{ $subtitle ?? '' }}</p>
+            </div>
 
-            @can('create', \App\Models\Reservation::class)
+            @if (($scope ?? 'upcoming') === 'upcoming')
+                @can('create', \App\Models\Reservation::class)
                 <a class="btn btn-primary" href="{{ route('reservations.create') }}">+ Novo Agendamento</a>
-            @endcan
+                @endcan
+            @endif
         </div>
 
         @if (session('success'))
@@ -137,7 +142,7 @@
         @endif
 
         <div class="card">
-            <form method="GET" action="{{ route('reservations.index') }}" class="filters">
+            <form method="GET" action="{{ route($filterRoute ?? 'reservations.index') }}" class="filters">
                 {{-- Busca --}}
                 <div class="field" style="min-width: 260px;">
                     <label for="q">Buscar</label>
@@ -164,13 +169,26 @@
                     </select>
                 </div>
 
-                <div class="field" style="min-width: 220px;">
-                    <label>&nbsp;</label>
-                    <div class="checkline">
-                        <input type="checkbox" name="only_future" value="1" id="only_future"
-                            {{ request('only_future') ? 'checked' : '' }}>
-                        <label for="only_future" style="margin:0; font-weight:700;">Somente futuras</label>
-                    </div>
+                <div class="field">
+                    <label for="date_from">Data inicial</label>
+                    <input
+                        type="date"
+                        id="date_from"
+                        name="date_from"
+                        class="input"
+                        value="{{ request('date_from') }}"
+                    >
+                </div>
+
+                <div class="field">
+                    <label for="date_to">Data final</label>
+                    <input
+                        type="date"
+                        id="date_to"
+                        name="date_to"
+                        class="input"
+                        value="{{ request('date_to') }}"
+                    >
                 </div>
 
                 <div class="field">
@@ -189,8 +207,8 @@
                     <div style="display:flex; gap:10px; align-items:center;">
                         <button type="submit" class="btn">Aplicar</button>
 
-                        @if(request()->filled('q') || request()->filled('room_id') || request()->filled('only_future'))
-                            <a class="btn" href="{{ route('reservations.index', ['per_page' => request('per_page', 10)]) }}">
+                        @if(request()->filled('q') || request()->filled('room_id') || request()->filled('date_from') || request()->filled('date_to'))
+                            <a class="btn" href="{{ route($filterRoute ?? 'reservations.index', ['per_page' => request('per_page', 10)]) }}">
                                 Limpar
                             </a>
                         @endif

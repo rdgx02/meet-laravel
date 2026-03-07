@@ -11,18 +11,18 @@ use App\Http\Requests\StoreReservationRequest;
 use App\Http\Requests\UpdateReservationRequest;
 use App\Models\Reservation;
 use App\Models\Room;
+use Illuminate\View\View;
 
 class ReservationController extends Controller
 {
     public function index(ListReservationsRequest $request, ListReservationsAction $listReservations)
     {
-        $rooms = Room::active()
-            ->orderBy('name')
-            ->get();
+        return $this->renderList($request, $listReservations, 'upcoming');
+    }
 
-        $reservations = $listReservations->execute($request->validated());
-
-        return view('reservations.index', compact('reservations', 'rooms'));
+    public function history(ListReservationsRequest $request, ListReservationsAction $listReservations): View
+    {
+        return $this->renderList($request, $listReservations, 'history');
     }
 
     public function create()
@@ -102,5 +102,34 @@ class ReservationController extends Controller
 
         return redirect()->route('reservations.index')
             ->with('success', 'Agendamento excluído com sucesso!');
+    }
+
+    private function renderList(
+        ListReservationsRequest $request,
+        ListReservationsAction $listReservations,
+        string $scope
+    ): View {
+        $this->authorize('viewAny', Reservation::class);
+
+        $rooms = Room::active()
+            ->orderBy('name')
+            ->get();
+
+        $reservations = $listReservations->execute($request->validated(), $scope);
+
+        $title = $scope === 'history' ? 'Historico de Agendamentos' : 'Agendamentos';
+        $subtitle = $scope === 'history'
+            ? 'Consulte reservas que ja aconteceram.'
+            : 'Consulte e gerencie os agendamentos de hoje e futuros.';
+        $filterRoute = $scope === 'history' ? 'reservations.history' : 'reservations.index';
+
+        return view('reservations.index', compact(
+            'reservations',
+            'rooms',
+            'scope',
+            'title',
+            'subtitle',
+            'filterRoute'
+        ));
     }
 }

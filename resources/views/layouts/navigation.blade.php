@@ -12,8 +12,12 @@
 
                 <!-- Navigation Links -->
                 <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
-                    <x-nav-link :href="route('reservations.index')" :active="request()->routeIs('reservations.*')">
+                    <x-nav-link :href="route('reservations.index')" :active="request()->routeIs('reservations.index') || request()->routeIs('reservations.create') || request()->routeIs('reservations.show') || request()->routeIs('reservations.edit')">
                         Agendamentos
+                    </x-nav-link>
+
+                    <x-nav-link :href="route('reservations.history')" :active="request()->routeIs('reservations.history')">
+                        Historico
                     </x-nav-link>
 
                     @can('viewAny', \App\Models\Room::class)
@@ -80,8 +84,12 @@
     <!-- Responsive Navigation Menu -->
     <div :class="{'block': open, 'hidden': ! open}" class="hidden sm:hidden">
         <div class="pt-2 pb-3 space-y-1">
-            <x-responsive-nav-link :href="route('reservations.index')" :active="request()->routeIs('reservations.*')">
+            <x-responsive-nav-link :href="route('reservations.index')" :active="request()->routeIs('reservations.index') || request()->routeIs('reservations.create') || request()->routeIs('reservations.show') || request()->routeIs('reservations.edit')">
                 Agendamentos
+            </x-responsive-nav-link>
+
+            <x-responsive-nav-link :href="route('reservations.history')" :active="request()->routeIs('reservations.history')">
+                Historico
             </x-responsive-nav-link>
 
             @can('viewAny', \App\Models\Room::class)

@@ -37,6 +37,10 @@ Route::middleware('auth')->group(function () {
     // Salas
     Route::resource('rooms', RoomController::class)->only(['index']);
 
+    // Historico da agenda (passadas)
+    Route::get('reservations/history', [ReservationController::class, 'history'])
+        ->name('reservations.history');
+
     // Agendamentos
     Route::resource('reservations', ReservationController::class);
 

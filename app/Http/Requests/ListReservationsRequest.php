@@ -18,7 +18,8 @@ class ListReservationsRequest extends FormRequest
             'per_page' => ['nullable', 'integer', 'in:10,20,50,100'],
             'room_id' => ['nullable', 'exists:rooms,id'],
             'q' => ['nullable', 'string', 'max:255'],
-            'only_future' => ['nullable', 'boolean'],
+            'date_from' => ['nullable', 'date', 'before_or_equal:date_to'],
+            'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
         ];
     }
 }

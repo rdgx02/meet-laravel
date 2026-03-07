@@ -11,24 +11,37 @@ class ListReservationsAction
 
     private const ALLOWED_PER_PAGE = [10, 20, 50, 100];
 
-    public function execute(array $filters): LengthAwarePaginator
+    public function execute(array $filters, string $scope = 'upcoming'): LengthAwarePaginator
     {
         $perPage = $this->resolvePerPage($filters['per_page'] ?? self::DEFAULT_PER_PAGE);
         $roomId = $filters['room_id'] ?? null;
         $q = trim((string) ($filters['q'] ?? ''));
-        $onlyFuture = filter_var($filters['only_future'] ?? false, FILTER_VALIDATE_BOOL);
+        $dateFrom = $filters['date_from'] ?? null;
+        $dateTo = $filters['date_to'] ?? null;
 
         $query = Reservation::query()
-            ->with(['room', 'user', 'editor'])
-            ->orderBy('date')
-            ->orderBy('start_time');
+            ->with(['room', 'user', 'editor']);
+
+        if ($scope === 'history') {
+            $query->whereDate('date', '<', now()->toDateString())
+                ->orderByDesc('date')
+                ->orderByDesc('start_time');
+        } else {
+            $query->whereDate('date', '>=', now()->toDateString())
+                ->orderBy('date')
+                ->orderBy('start_time');
+        }
 
         if (! empty($roomId)) {
             $query->where('room_id', $roomId);
         }
 
-        if ($onlyFuture) {
-            $query->whereDate('date', '>=', now()->toDateString());
+        if (! empty($dateFrom)) {
+            $query->whereDate('date', '>=', $dateFrom);
+        }
+
+        if (! empty($dateTo)) {
+            $query->whereDate('date', '<=', $dateTo);
         }
 
         if ($q !== '') {
