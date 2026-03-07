@@ -2,56 +2,25 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\Reservations\CreateReservationAction;
+use App\Actions\Reservations\ListReservationsAction;
+use App\Actions\Reservations\UpdateReservationAction;
+use App\Exceptions\ReservationConflictException;
+use App\Http\Requests\ListReservationsRequest;
 use App\Http\Requests\StoreReservationRequest;
 use App\Http\Requests\UpdateReservationRequest;
 use App\Models\Reservation;
 use App\Models\Room;
-use App\Services\ReservationConflictService;
 
 class ReservationController extends Controller
 {
-    public function index()
+    public function index(ListReservationsRequest $request, ListReservationsAction $listReservations)
     {
-        $this->authorize('viewAny', Reservation::class);
-
-        $perPage = (int) request()->get('per_page', 10);
-        $roomId  = request()->get('room_id');
-        $q       = trim((string) request()->get('q', ''));
-
-        // Salas para o select do filtro
-        $rooms = Room::where('is_active', true)
+        $rooms = Room::active()
             ->orderBy('name')
             ->get();
 
-        // Query base (carrega room, criador e editor)
-        $query = Reservation::with(['room', 'user', 'editor'])
-            ->orderBy('date')
-            ->orderBy('start_time');
-
-        // Filtro por sala (se vier room_id)
-        if (!empty($roomId)) {
-            $query->where('room_id', $roomId);
-        }
-
-        // Filtro: somente futuras (inclui hoje inteiro; some só quando virar o dia)
-        if (request()->boolean('only_future')) {
-            $query->whereDate('date', '>=', now()->toDateString());
-        }
-
-        // Busca (Título, Solicitante, Sala)
-        if ($q !== '') {
-            $query->where(function ($sub) use ($q) {
-                $sub->where('title', 'like', "%{$q}%")
-                    ->orWhere('requester', 'like', "%{$q}%")
-                    ->orWhereHas('room', function ($room) use ($q) {
-                        $room->where('name', 'like', "%{$q}%");
-                    });
-            });
-        }
-
-        $reservations = $query
-            ->paginate($perPage)
-            ->withQueryString();
+        $reservations = $listReservations->execute($request->validated());
 
         return view('reservations.index', compact('reservations', 'rooms'));
     }
@@ -60,33 +29,27 @@ class ReservationController extends Controller
     {
         $this->authorize('create', Reservation::class);
 
-        $rooms = Room::where('is_active', true)
+        $rooms = Room::active()
             ->orderBy('name')
             ->get();
 
         return view('reservations.create', compact('rooms'));
     }
 
-    public function store(StoreReservationRequest $request)
+    public function store(StoreReservationRequest $request, CreateReservationAction $createReservation)
     {
-        $this->authorize('create', Reservation::class);
-
-        $data = $request->validated();
-
-        // Rastreabilidade: quem criou
-        $data['user_id'] = auth()->id();
-
-        $conflictService = new ReservationConflictService();
-
-        if ($conflictService->hasConflict($data)) {
+        try {
+            $createReservation->execute(
+                $request->validated(),
+                (int) $request->user()->id
+            );
+        } catch (ReservationConflictException $exception) {
             return back()
                 ->withInput()
                 ->withErrors([
-                    'start_time' => 'Conflito: já existe um agendamento nessa sala nesse horário.',
+                    'start_time' => $exception->getMessage(),
                 ]);
         }
-
-        Reservation::create($data);
 
         return redirect()->route('reservations.index')
             ->with('success', 'Agendamento criado com sucesso!');
@@ -105,33 +68,27 @@ class ReservationController extends Controller
     {
         $this->authorize('update', $reservation);
 
-        $rooms = Room::where('is_active', true)
+        $rooms = Room::active()
             ->orderBy('name')
             ->get();
 
         return view('reservations.edit', compact('reservation', 'rooms'));
     }
 
-    public function update(UpdateReservationRequest $request, Reservation $reservation)
-    {
-        $this->authorize('update', $reservation);
-
-        $data = $request->validated();
-
-        $conflictService = new ReservationConflictService();
-
-        if ($conflictService->hasConflict($data, $reservation->id)) {
+    public function update(
+        UpdateReservationRequest $request,
+        Reservation $reservation,
+        UpdateReservationAction $updateReservation
+    ) {
+        try {
+            $updateReservation->execute($reservation, $request->validated());
+        } catch (ReservationConflictException $exception) {
             return back()
                 ->withInput()
                 ->withErrors([
-                    'start_time' => 'Conflito: já existe um agendamento nessa sala nesse horário.',
+                    'start_time' => $exception->getMessage(),
                 ]);
         }
-
-        // ✅ Rastreabilidade: quem editou por último
-        $data['updated_by'] = auth()->id();
-
-        $reservation->update($data);
 
         return redirect()->route('reservations.index')
             ->with('success', 'Agendamento atualizado com sucesso!');

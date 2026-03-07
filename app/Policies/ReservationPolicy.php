@@ -7,19 +7,9 @@ use App\Models\User;
 
 class ReservationPolicy
 {
-    private function isAdmin(User $user): bool
-    {
-        return $user->isAdmin();
-    }
-
-    private function isSecretary(User $user): bool
-    {
-        return $user->role === 'secretary';
-    }
-
     private function canManageAgenda(User $user): bool
     {
-        return $this->isAdmin($user) || $this->isSecretary($user);
+        return $user->canManageAgenda();
     }
 
     public function viewAny(User $user): bool

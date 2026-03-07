@@ -13,13 +13,13 @@ class AdminMiddleware
      */
     public function handle(Request $request, Closure $next): Response
     {
-        // usuário não logado
-        if (!auth()->check()) {
+        $user = $request->user();
+
+        if ($user === null) {
             return redirect()->route('login');
         }
 
-        // usuário não é admin
-        if (auth()->user()->role !== 'admin') {
+        if (! $user->isAdmin()) {
             abort(403, 'Acesso não autorizado.');
         }
 
