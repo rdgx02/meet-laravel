@@ -9,6 +9,13 @@ class RegistrationTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        config(['auth.allow_public_registration' => true]);
+    }
+
     public function test_registration_screen_can_be_rendered(): void
     {
         $response = $this->get('/register');
@@ -26,6 +33,15 @@ class RegistrationTest extends TestCase
         ]);
 
         $this->assertAuthenticated();
-        $response->assertRedirect(route('dashboard', absolute: false));
+        $response->assertRedirect(route('reservations.index', absolute: false));
+    }
+
+    public function test_registration_is_disabled_by_default(): void
+    {
+        config(['auth.allow_public_registration' => false]);
+
+        $response = $this->get('/register');
+
+        $response->assertNotFound();
     }
 }

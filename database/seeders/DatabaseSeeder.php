@@ -12,6 +12,7 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call([
+            UserSeeder::class,        // cria perfis base de acesso
             RoomSeeder::class,        // primeiro cria salas
             ReservationSeeder::class, // depois cria agendamentos
         ]);

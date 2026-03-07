@@ -5,6 +5,7 @@ namespace App\Actions\Reservations;
 use App\Exceptions\ReservationConflictException;
 use App\Models\Reservation;
 use App\Services\ReservationConflictService;
+use Illuminate\Support\Facades\DB;
 
 class UpdateReservationAction
 {
@@ -14,12 +15,14 @@ class UpdateReservationAction
 
     public function execute(Reservation $reservation, array $data): Reservation
     {
-        if ($this->conflictService->hasConflict($data, $reservation->id)) {
-            throw ReservationConflictException::forRoomAndTime();
-        }
+        return DB::transaction(function () use ($reservation, $data): Reservation {
+            if ($this->conflictService->hasConflict($data, $reservation->id, true)) {
+                throw ReservationConflictException::forRoomAndTime();
+            }
 
-        $reservation->update($data);
+            $reservation->update($data);
 
-        return $reservation->refresh();
+            return $reservation->refresh();
+        });
     }
 }
