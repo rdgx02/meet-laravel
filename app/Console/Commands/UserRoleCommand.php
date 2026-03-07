@@ -2,8 +2,9 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
+use App\Enums\UserRole;
 use App\Models\User;
+use Illuminate\Console\Command;
 
 class UserRoleCommand extends Command
 {
@@ -23,19 +24,21 @@ class UserRoleCommand extends Command
     public function handle()
     {
         $userId = $this->argument('user_id');
-        $role   = strtolower($this->argument('role'));
+        $role = UserRole::tryFrom(strtolower($this->argument('role')));
 
-        // validar role
-        if (!in_array($role, ['admin', 'secretary', 'user'])) {
-            $this->error('Role inválida. Use: admin, secretary ou user');
+        if ($role === null) {
+            $allowed = implode(', ', UserRole::values());
+            $this->error("Role invalida. Use: {$allowed}");
+
             return Command::FAILURE;
         }
 
         // buscar usuário
         $user = User::find($userId);
 
-        if (!$user) {
+        if (! $user) {
             $this->error("Usuário ID {$userId} não encontrado.");
+
             return Command::FAILURE;
         }
 
@@ -43,7 +46,7 @@ class UserRoleCommand extends Command
         $user->role = $role;
         $user->save();
 
-        $this->info("✅ Usuário {$user->name} agora é {$role}.");
+        $this->info("Usuario {$user->name} agora e {$role->value}.");
 
         return Command::SUCCESS;
     }

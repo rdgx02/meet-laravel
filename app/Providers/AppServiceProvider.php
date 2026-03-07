@@ -2,10 +2,12 @@
 
 namespace App\Providers;
 
-use Illuminate\Support\ServiceProvider;
-use Illuminate\Support\Facades\Gate;
+use App\Models\Reservation;
 use App\Models\Room;
+use App\Policies\ReservationPolicy;
 use App\Policies\RoomPolicy;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -22,7 +24,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // Registrar Policy da Room
+        Gate::policy(Reservation::class, ReservationPolicy::class);
         Gate::policy(Room::class, RoomPolicy::class);
     }
 }
