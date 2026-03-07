@@ -172,22 +172,24 @@
                 <div class="field">
                     <label for="date_from">Data inicial</label>
                     <input
-                        type="date"
+                        type="text"
                         id="date_from"
                         name="date_from"
-                        class="input"
+                        class="input js-date-picker"
                         value="{{ request('date_from') }}"
+                        placeholder="dd/mm/aaaa"
                     >
                 </div>
 
                 <div class="field">
                     <label for="date_to">Data final</label>
                     <input
-                        type="date"
+                        type="text"
                         id="date_to"
                         name="date_to"
-                        class="input"
+                        class="input js-date-picker"
                         value="{{ request('date_to') }}"
+                        placeholder="dd/mm/aaaa"
                     >
                 </div>
 
@@ -206,12 +208,9 @@
                     <label>&nbsp;</label>
                     <div style="display:flex; gap:10px; align-items:center;">
                         <button type="submit" class="btn">Aplicar</button>
-
-                        @if(request()->filled('q') || request()->filled('room_id') || request()->filled('date_from') || request()->filled('date_to'))
-                            <a class="btn" href="{{ route($filterRoute ?? 'reservations.index', ['per_page' => request('per_page', 10)]) }}">
-                                Limpar
-                            </a>
-                        @endif
+                        <a class="btn" href="{{ route($filterRoute ?? 'reservations.index', ['per_page' => request('per_page', 10)]) }}">
+                            Limpar filtros
+                        </a>
                     </div>
                 </div>
             </form>

@@ -46,6 +46,7 @@ class ReservationController extends Controller
         } catch (ReservationConflictException $exception) {
             return back()
                 ->withInput()
+                ->with('reservation_conflict', $exception->context())
                 ->withErrors([
                     'start_time' => $exception->getMessage(),
                 ]);
@@ -85,6 +86,7 @@ class ReservationController extends Controller
         } catch (ReservationConflictException $exception) {
             return back()
                 ->withInput()
+                ->with('reservation_conflict', $exception->context())
                 ->withErrors([
                     'start_time' => $exception->getMessage(),
                 ]);
@@ -119,7 +121,7 @@ class ReservationController extends Controller
 
         $title = $scope === 'history' ? 'Historico de Agendamentos' : 'Agendamentos';
         $subtitle = $scope === 'history'
-            ? 'Consulte reservas que ja aconteceram.'
+            ? 'Consulte reservas que ja aconteceram (somente leitura).'
             : 'Consulte e gerencie os agendamentos de hoje e futuros.';
         $filterRoute = $scope === 'history' ? 'reservations.history' : 'reservations.index';
 

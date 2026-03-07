@@ -16,8 +16,10 @@ class UpdateReservationAction
     public function execute(Reservation $reservation, array $data): Reservation
     {
         return DB::transaction(function () use ($reservation, $data): Reservation {
-            if ($this->conflictService->hasConflict($data, $reservation->id, true)) {
-                throw ReservationConflictException::forRoomAndTime();
+            $conflict = $this->conflictService->findConflict($data, $reservation->id, true);
+
+            if ($conflict !== null) {
+                throw ReservationConflictException::forRoomAndTime($conflict);
             }
 
             $reservation->update($data);

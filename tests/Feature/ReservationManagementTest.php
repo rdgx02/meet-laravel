@@ -7,6 +7,7 @@ use App\Models\Reservation;
 use App\Models\Room;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
 class ReservationManagementTest extends TestCase
@@ -89,7 +90,57 @@ class ReservationManagementTest extends TestCase
 
         $response->assertRedirect(route('reservations.create'));
         $response->assertSessionHasErrors('start_time');
+        $response->assertSessionHas('reservation_conflict', function (array $conflict) use ($room, $date): bool {
+            return $conflict['room_name'] === $room->name
+                && $conflict['date'] === Carbon::parse($date)->format('d/m/Y')
+                && $conflict['start_time'] === '10:00'
+                && $conflict['end_time'] === '11:00'
+                && $conflict['title'] === 'Reserva existente'
+                && $conflict['requester'] === 'Secretaria';
+        });
         $this->assertDatabaseCount('reservations', 1);
+    }
+
+    public function test_past_reservation_cannot_be_edited_or_deleted_even_by_secretary(): void
+    {
+        $user = User::factory()->create(['role' => UserRole::Secretary]);
+        $room = Room::create(['name' => 'Sala 305', 'is_active' => true]);
+
+        $reservation = Reservation::create([
+            'room_id' => $room->id,
+            'user_id' => $user->id,
+            'date' => now()->subDay()->toDateString(),
+            'start_time' => '08:00',
+            'end_time' => '09:00',
+            'title' => 'Reserva encerrada',
+            'requester' => 'Secretaria',
+            'contact' => null,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('reservations.edit', $reservation))
+            ->assertForbidden();
+
+        $this->actingAs($user)
+            ->put(route('reservations.update', $reservation), [
+                'room_id' => $room->id,
+                'date' => now()->addDay()->toDateString(),
+                'start_time' => '10:00',
+                'end_time' => '11:00',
+                'title' => 'Tentativa de alterar',
+                'requester' => 'Secretaria',
+                'contact' => null,
+            ])
+            ->assertForbidden();
+
+        $this->actingAs($user)
+            ->delete(route('reservations.destroy', $reservation))
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('reservations', [
+            'id' => $reservation->id,
+            'title' => 'Reserva encerrada',
+        ]);
     }
 
     public function test_index_shows_only_today_and_future_reservations(): void

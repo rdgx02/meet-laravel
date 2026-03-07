@@ -4,6 +4,21 @@
     $dateValue = old('date', $isEdit ? $reservation->date : now()->toDateString());
     $startValue = old('start_time', $isEdit ? $reservation->start_time : '08:00');
     $endValue = old('end_time', $isEdit ? $reservation->end_time : '09:00');
+    $conflictContext = session('reservation_conflict');
+    $conflictDetails = is_array($conflictContext) ? $conflictContext : [];
+    $conflictMessage = $errors->first('start_time');
+    $showConflictAlert = $conflictDetails !== [] && $conflictMessage !== '';
+    $conflictRoomName = $conflictDetails['room_name'] ?? '-';
+    $conflictDate = $conflictDetails['date'] ?? '-';
+    $conflictStart = $conflictDetails['start_time'] ?? '--:--';
+    $conflictEnd = $conflictDetails['end_time'] ?? '--:--';
+    $conflictTitle = $conflictDetails['title'] ?? '-';
+    $conflictRequester = $conflictDetails['requester'] ?? '-';
+    $otherErrors = collect($errors->all());
+
+    if ($showConflictAlert) {
+        $otherErrors = $otherErrors->reject(fn (string $error): bool => $error === $conflictMessage)->values();
+    }
 @endphp
 
 <div class="max-w-3xl mx-auto">
@@ -12,11 +27,48 @@
         {{ $isEdit ? 'Atualize os dados e salve as alteracoes.' : 'Preencha os dados para registrar um novo horario.' }}
     </p>
 
-    @if ($errors->any())
+    @if ($showConflictAlert)
+        <div class="mb-5 overflow-hidden rounded-xl border border-amber-300 bg-gradient-to-r from-amber-50 to-orange-50 text-amber-950 shadow-sm">
+            <div class="flex items-start gap-3 border-b border-amber-200 bg-amber-100/60 px-4 py-3">
+                <div class="flex h-7 w-7 items-center justify-center rounded-full bg-amber-200/80 text-amber-900">
+                    !
+                </div>
+                <div>
+                    <p class="text-sm font-semibold">Horario indisponivel para essa sala</p>
+                    <p class="mt-0.5 text-xs text-amber-900/80">{{ $conflictMessage }}</p>
+                </div>
+            </div>
+
+            <div class="space-y-3 px-4 py-4">
+                <div class="rounded-lg border border-amber-200 bg-white/90 px-4 py-3">
+                    <p class="text-[11px] font-semibold uppercase tracking-wide text-amber-800">Horario ocupado</p>
+                    <p class="mt-1 text-lg font-semibold leading-tight text-amber-950">{{ $conflictStart }} - {{ $conflictEnd }}</p>
+                    <p class="mt-1 text-sm text-amber-900">{{ $conflictDate }} | Sala {{ $conflictRoomName }}</p>
+                </div>
+
+                <div class="grid grid-cols-1 gap-2 sm:grid-cols-2 text-sm">
+                    <div class="rounded-lg border border-amber-200 bg-white/70 px-3 py-2">
+                        <p class="text-[11px] font-semibold uppercase tracking-wide text-amber-800">Titulo da reserva existente</p>
+                        <p class="mt-1 font-medium text-amber-950">{{ $conflictTitle }}</p>
+                    </div>
+                    <div class="rounded-lg border border-amber-200 bg-white/70 px-3 py-2">
+                        <p class="text-[11px] font-semibold uppercase tracking-wide text-amber-800">Solicitante</p>
+                        <p class="mt-1 font-medium text-amber-950">{{ $conflictRequester }}</p>
+                    </div>
+                </div>
+
+                <p class="text-xs text-amber-900/90">
+                    Sugestao: escolha outro horario livre ou altere a sala para concluir o agendamento.
+                </p>
+            </div>
+        </div>
+    @endif
+
+    @if ($otherErrors->isNotEmpty())
         <div class="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
             <p class="font-semibold mb-1">Nao foi possivel salvar:</p>
             <ul class="list-disc ms-5 space-y-1">
-                @foreach ($errors->all() as $error)
+                @foreach ($otherErrors as $error)
                     <li>{{ $error }}</li>
                 @endforeach
             </ul>
@@ -51,12 +103,13 @@
                 <label for="date" class="block text-sm font-medium text-gray-700 mb-1">Data</label>
                 <input
                     id="date"
-                    type="date"
+                    type="text"
                     name="date"
-                    min="{{ now()->toDateString() }}"
                     value="{{ $dateValue }}"
+                    data-min-date="{{ now()->toDateString() }}"
                     required
-                    class="w-full rounded-md border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
+                    class="js-date-picker w-full rounded-md border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
+                    placeholder="dd/mm/aaaa"
                 >
             </div>
 

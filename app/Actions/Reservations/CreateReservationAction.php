@@ -19,8 +19,10 @@ class CreateReservationAction
         $payload['user_id'] = $creatorId;
 
         return DB::transaction(function () use ($payload): Reservation {
-            if ($this->conflictService->hasConflict($payload, lockForUpdate: true)) {
-                throw ReservationConflictException::forRoomAndTime();
+            $conflict = $this->conflictService->findConflict($payload, lockForUpdate: true);
+
+            if ($conflict !== null) {
+                throw ReservationConflictException::forRoomAndTime($conflict);
             }
 
             return Reservation::create($payload);
