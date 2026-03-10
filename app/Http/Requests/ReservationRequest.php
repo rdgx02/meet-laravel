@@ -25,7 +25,7 @@ abstract class ReservationRequest extends FormRequest
             'room_id.required' => 'Selecione uma sala.',
             'room_id.exists' => 'Sala invalida.',
             'date.required' => 'Informe a data.',
-            'date.after_or_equal' => 'A data nao pode ser no passado.',
+            'date.after_or_equal' => 'Não é permitido informar data ou horário de início que já passou.',
             'start_time.required' => 'Informe o horario de inicio.',
             'start_time.date_format' => 'Horario de inicio invalido (use HH:MM).',
             'end_time.required' => 'Informe o horario de fim.',

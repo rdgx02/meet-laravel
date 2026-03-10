@@ -101,6 +101,34 @@ class ReservationManagementTest extends TestCase
         $this->assertDatabaseCount('reservations', 1);
     }
 
+    public function test_cannot_create_reservation_with_start_time_in_the_past_today(): void
+    {
+        Carbon::setTestNow(Carbon::create(2026, 3, 10, 10, 54, 0, 'America/Sao_Paulo'));
+
+        try {
+            $user = User::factory()->create(['role' => UserRole::Secretary]);
+            $room = Room::create(['name' => 'Sala 203', 'is_active' => true]);
+
+            $response = $this->actingAs($user)
+                ->from(route('reservations.create'))
+                ->post(route('reservations.store'), [
+                    'room_id' => $room->id,
+                    'date' => now()->toDateString(),
+                    'start_time' => '08:00',
+                    'end_time' => '09:00',
+                    'title' => 'Reserva passada no mesmo dia',
+                    'requester' => 'Secretaria',
+                    'contact' => null,
+                ]);
+
+            $response->assertRedirect(route('reservations.create'));
+            $response->assertSessionHasErrors('start_time');
+            $this->assertDatabaseCount('reservations', 0);
+        } finally {
+            Carbon::setTestNow();
+        }
+    }
+
     public function test_past_reservation_cannot_be_edited_or_deleted_even_by_secretary(): void
     {
         $user = User::factory()->create(['role' => UserRole::Secretary]);
@@ -143,71 +171,107 @@ class ReservationManagementTest extends TestCase
         ]);
     }
 
-    public function test_index_shows_only_today_and_future_reservations(): void
+    public function test_index_shows_only_upcoming_reservations_including_today_active_ones(): void
     {
-        $user = User::factory()->create(['role' => UserRole::User]);
-        $room = Room::create(['name' => 'Sala Agenda', 'is_active' => true]);
+        Carbon::setTestNow(Carbon::create(2026, 3, 10, 10, 54, 0, 'America/Sao_Paulo'));
 
-        Reservation::create([
-            'room_id' => $room->id,
-            'user_id' => $user->id,
-            'date' => now()->subDay()->toDateString(),
-            'start_time' => '09:00',
-            'end_time' => '10:00',
-            'title' => 'Reserva Passada',
-            'requester' => 'Equipe',
-            'contact' => null,
-        ]);
+        try {
+            $user = User::factory()->create(['role' => UserRole::User]);
+            $room = Room::create(['name' => 'Sala Agenda', 'is_active' => true]);
 
-        Reservation::create([
-            'room_id' => $room->id,
-            'user_id' => $user->id,
-            'date' => now()->addDay()->toDateString(),
-            'start_time' => '11:00',
-            'end_time' => '12:00',
-            'title' => 'Reserva Futura',
-            'requester' => 'Equipe',
-            'contact' => null,
-        ]);
+            Reservation::create([
+                'room_id' => $room->id,
+                'user_id' => $user->id,
+                'date' => now()->toDateString(),
+                'start_time' => '08:00',
+                'end_time' => '09:00',
+                'title' => 'Encerrada Hoje',
+                'requester' => 'Equipe',
+                'contact' => null,
+            ]);
 
-        $response = $this->actingAs($user)->get(route('reservations.index'));
+            Reservation::create([
+                'room_id' => $room->id,
+                'user_id' => $user->id,
+                'date' => now()->toDateString(),
+                'start_time' => '10:30',
+                'end_time' => '11:30',
+                'title' => 'Em Andamento Hoje',
+                'requester' => 'Equipe',
+                'contact' => null,
+            ]);
 
-        $response->assertOk();
-        $response->assertSeeText('Reserva Futura');
-        $response->assertDontSeeText('Reserva Passada');
+            Reservation::create([
+                'room_id' => $room->id,
+                'user_id' => $user->id,
+                'date' => now()->addDay()->toDateString(),
+                'start_time' => '11:00',
+                'end_time' => '12:00',
+                'title' => 'Reserva Futura',
+                'requester' => 'Equipe',
+                'contact' => null,
+            ]);
+
+            $response = $this->actingAs($user)->get(route('reservations.index'));
+
+            $response->assertOk();
+            $response->assertSeeText('Em Andamento Hoje');
+            $response->assertSeeText('Reserva Futura');
+            $response->assertDontSeeText('Encerrada Hoje');
+        } finally {
+            Carbon::setTestNow();
+        }
     }
 
-    public function test_history_shows_only_past_reservations(): void
+    public function test_history_shows_only_past_reservations_including_ended_today(): void
     {
-        $user = User::factory()->create(['role' => UserRole::User]);
-        $room = Room::create(['name' => 'Sala Historico', 'is_active' => true]);
+        Carbon::setTestNow(Carbon::create(2026, 3, 10, 10, 54, 0, 'America/Sao_Paulo'));
 
-        Reservation::create([
-            'room_id' => $room->id,
-            'user_id' => $user->id,
-            'date' => now()->subDay()->toDateString(),
-            'start_time' => '09:00',
-            'end_time' => '10:00',
-            'title' => 'Passada no Historico',
-            'requester' => 'Equipe',
-            'contact' => null,
-        ]);
+        try {
+            $user = User::factory()->create(['role' => UserRole::User]);
+            $room = Room::create(['name' => 'Sala Historico', 'is_active' => true]);
 
-        Reservation::create([
-            'room_id' => $room->id,
-            'user_id' => $user->id,
-            'date' => now()->addDay()->toDateString(),
-            'start_time' => '11:00',
-            'end_time' => '12:00',
-            'title' => 'Futura na Agenda',
-            'requester' => 'Equipe',
-            'contact' => null,
-        ]);
+            Reservation::create([
+                'room_id' => $room->id,
+                'user_id' => $user->id,
+                'date' => now()->subDay()->toDateString(),
+                'start_time' => '09:00',
+                'end_time' => '10:00',
+                'title' => 'Passada no Historico',
+                'requester' => 'Equipe',
+                'contact' => null,
+            ]);
 
-        $response = $this->actingAs($user)->get(route('reservations.history'));
+            Reservation::create([
+                'room_id' => $room->id,
+                'user_id' => $user->id,
+                'date' => now()->toDateString(),
+                'start_time' => '08:00',
+                'end_time' => '09:00',
+                'title' => 'Encerrada Hoje no Historico',
+                'requester' => 'Equipe',
+                'contact' => null,
+            ]);
 
-        $response->assertOk();
-        $response->assertSeeText('Passada no Historico');
-        $response->assertDontSeeText('Futura na Agenda');
+            Reservation::create([
+                'room_id' => $room->id,
+                'user_id' => $user->id,
+                'date' => now()->toDateString(),
+                'start_time' => '10:30',
+                'end_time' => '11:30',
+                'title' => 'Em Andamento na Agenda',
+                'requester' => 'Equipe',
+                'contact' => null,
+            ]);
+
+            $response = $this->actingAs($user)->get(route('reservations.history'));
+
+            $response->assertOk();
+            $response->assertSeeText('Passada no Historico');
+            $response->assertSeeText('Encerrada Hoje no Historico');
+            $response->assertDontSeeText('Em Andamento na Agenda');
+        } finally {
+            Carbon::setTestNow();
+        }
     }
 }

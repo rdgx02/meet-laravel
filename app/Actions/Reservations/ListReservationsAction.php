@@ -18,16 +18,30 @@ class ListReservationsAction
         $q = trim((string) ($filters['q'] ?? ''));
         $dateFrom = $filters['date_from'] ?? null;
         $dateTo = $filters['date_to'] ?? null;
+        $today = now()->toDateString();
+        $currentTime = now()->format('H:i:s');
 
         $query = Reservation::query()
             ->with(['room', 'user', 'editor']);
 
         if ($scope === 'history') {
-            $query->whereDate('date', '<', now()->toDateString())
+            $query->where(function ($query) use ($today, $currentTime): void {
+                $query->whereDate('date', '<', $today)
+                    ->orWhere(function ($todayQuery) use ($today, $currentTime): void {
+                        $todayQuery->whereDate('date', '=', $today)
+                            ->where('end_time', '<=', $currentTime);
+                    });
+            })
                 ->orderByDesc('date')
                 ->orderByDesc('start_time');
         } else {
-            $query->whereDate('date', '>=', now()->toDateString())
+            $query->where(function ($query) use ($today, $currentTime): void {
+                $query->whereDate('date', '>', $today)
+                    ->orWhere(function ($todayQuery) use ($today, $currentTime): void {
+                        $todayQuery->whereDate('date', '=', $today)
+                            ->where('end_time', '>', $currentTime);
+                    });
+            })
                 ->orderBy('date')
                 ->orderBy('start_time');
         }

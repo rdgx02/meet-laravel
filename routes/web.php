@@ -35,7 +35,7 @@ Route::get('/admin-teste', function () {
 Route::middleware('auth')->group(function () {
 
     // Salas
-    Route::resource('rooms', RoomController::class)->only(['index']);
+    Route::resource('rooms', RoomController::class)->except(['show']);
 
     // Historico da agenda (passadas)
     Route::get('reservations/history', [ReservationController::class, 'history'])

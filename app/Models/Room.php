@@ -12,6 +12,10 @@ class Room extends Model
         'is_active',
     ];
 
+    protected $casts = [
+        'is_active' => 'boolean',
+    ];
+
     public function scopeActive(Builder $query): Builder
     {
         return $query->where('is_active', true);
